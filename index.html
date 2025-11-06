@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Tic Tac Toe - Lawan Komputer</title>
+
+    <style>
+        :root {
+            /* Warna Neon */
+            --color-neon-blue: #00FFFF; /* Biru cerah */
+            --color-neon-purple: #9933FF; /* Ungu cerah */
+            --color-bg-dark: #1A0A3A; /* Latar belakang gelap */
+            --color-text-light: #F0F8FF;
+
+            /* Animasi */
+            --animation-duration: 0.3s;
+        }
+
+        /* RESET & BODY */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color var(--animation-duration), color var(--animation-duration), box-shadow var(--animation-duration);
+        }
+
+        body {
+            background-color: var(--color-bg-dark);
+            color: var(--color-text-light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* HEADER */
+        .header {
+            width: 100%;
+            max-width: 400px; /* Batasan lebar kontainer utama */
+            text-align: center;
+            margin-bottom: 2vh;
+            position: relative;
+        }
+
+        h1 {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            color: var(--color-neon-blue);
+            text-shadow: 0 0 10px var(--color-neon-blue), 0 0 20px var(--color-neon-blue);
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        /* TOMBOL MUTE */
+        .mute-button {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--color-text-light);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            text-shadow: 0 0 5px var(--color-neon-purple);
+        }
+        .mute-button:hover {
+            color: var(--color-neon-purple);
+        }
+
+        /* CONTAINER UTAMA */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        /* STATUS PERMAINAN */
+        .status {
+            font-size: clamp(1rem, 3vw, 1.5rem);
+            margin: 1.5vh 0;
+            min-height: 1.5em; /* Menjaga ruang */
+        }
+
+        /* GRID PAPAN */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            width: 100%;
+            max-width: 90vw;
+            aspect-ratio: 1 / 1; /* Selalu kotak */
+            gap: 5px;
+            padding: 5px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            box-shadow: 0 0 25px rgba(153, 51, 255, 0.5);
+        }
+
+        .cell {
+            background-color: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(3rem, 15vw, 5rem); /* Ukuran X/O responsif */
+            cursor: pointer;
+            border-radius: 8px;
+            user-select: none;
+            transition: background-color var(--animation-duration), transform var(--animation-duration);
+            line-height: 1;
+            font-weight: bold;
+        }
+
+        /* EFEK HOVER & ACTIVE */
+        .cell:not(.x):not(.o):hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            transform: scale(1.05);
+        }
+        .cell:active {
+            transform: scale(0.95);
+        }
+
+        /* TANDA X */
+        .cell.x {
+            color: var(--color-neon-blue);
+            text-shadow: 0 0 8px var(--color-neon-blue);
+            animation: popIn var(--animation-duration) ease-out;
+            cursor: default;
+        }
+
+        /* TANDA O */
+        .cell.o {
+            color: var(--color-neon-purple);
+            text-shadow: 0 0 8px var(--color-neon-purple);
+            animation: popIn var(--animation-duration) ease-out;
+            cursor: default;
+        }
+
+        /* ANIMASI MASUK */
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* EFEK MENANG */
+        .cell.win {
+            background-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 15px var(--color-neon-blue), 0 0 25px var(--color-neon-purple);
+            transition: all 0.5s ease-in-out;
+        }
+
+        /* LAYAR AKHIR & TOMBOL MAIN LAGI */
+        .game-end-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(26, 10, 58, 0.9); /* Latar belakang gelap semi-transparan */
+            display: none; /* Default tersembunyi */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            z-index: 100;
+        }
+
+        .game-end-screen.visible {
+            display: flex;
+            opacity: 1;
+        }
+
+        .end-message {
+            font-size: clamp(2rem, 8vw, 4rem);
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--color-text-light);
+            text-shadow: 0 0 15px var(--color-neon-purple);
+            animation: glowPulse 2s infinite alternate;
+        }
+
+        @keyframes glowPulse {
+            from {
+                text-shadow: 0 0 10px var(--color-neon-purple), 0 0 20px var(--color-neon-blue);
+            }
+            to {
+                text-shadow: 0 0 20px var(--color-neon-purple), 0 0 40px var(--color-neon-blue);
+            }
+        }
+
+        .restart-button {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--color-bg-dark);
+            background-color: var(--color-neon-blue);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 0 15px var(--color-neon-blue);
+            animation: buttonPulse 1.5s infinite;
+        }
+
+        .restart-button:hover {
+            background-color: var(--color-neon-purple);
+            box-shadow: 0 0 15px var(--color-neon-purple);
+            animation: none;
+        }
+
+        @keyframes buttonPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🎯 Tic Tac Toe - Lawan Komputer</h1>
+        <button class="mute-button" id="muteBtn">🔊</button>
+    </div>
+
+    <div class="game-container">
+        <div class="status" id="statusText">Mulai permainan! Kamu adalah **X**.</div>
+        <div class="board" id="gameBoard">
+            </div>
+    </div>
+
+    <div class="game-end-screen" id="endScreen">
+        <div class="end-message" id="endMessage"></div>
+        <button class="restart-button" id="restartBtn">Main Lagi</button>
+    </div>
+
+    <script>
+        // DOM ELEMENTS
+        const gameBoard = document.getElementById('gameBoard');
+        const statusText = document.getElementById('statusText');
+        const endScreen = document.getElementById('endScreen');
+        const endMessage = document.getElementById('endMessage');
+        const restartBtn = document.getElementById('restartBtn');
+        const muteBtn = document.getElementById('muteBtn');
+
+        // GAME STATE
+        let boardState = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X'; // Pemain selalu 'X', Komputer selalu 'O'
+        let isGameActive = true;
+        let isComputerTurn = false;
+        let isMuted = false;
+
+        // WINNING CONDITIONS (indeks sel)
+        const winConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Baris
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Kolom
+            [0, 4, 8], [2, 4, 6]             // Diagonal
+        ];
+
+        // AUDIO ELEMENTS
+        const clickSound = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAAAAAA=='); // Dummy/placeholder audio
+        const winSound = new Audio('data:audio/wav;base64,UklGRvQBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAQQBAAD//wAAAAAAAAAAAAAAdwAATgAAVQAASwAATgAANAAAADAAAAAFAAAA4QAAABIAAABaAAAAhAAAABYAAAAbAAAAcwAAAE0AAAA2AAAAMwAAADAAAAAjAAAAJAAAAD8AAABcAAAARwAAAEAAAAAzAAAAOwAAABQAAAAVAAAAEwAAAAkAAAACAAAAAQAAAAAAAAAAAgAAAAAAAAABAAAAAAAAAAAAAQAAAAIAAAADAAAABgAAAAoAAAARAAAAHwAAADQAAABbAAAAdQAAAIEAAACQAAAAngAAALkAAADTAAAAuwAAANMAAADLAAAAwgAAALkAAACyAAAArwAAAJ4AAACWAAAAiQAAAD8AAAAwAAAAEwAAAAGAAAAAAAAAAAAAQAAAAAAAAAAAwAAAAYAAAAMAAAAFQAAACIAAAAwAAAARgAAAG8AAACUAAAAoAAAALgAAANNQAAA2AAAAMwAAAAwAAAACAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAABgAAAAMAAAAA2AAAAAQAAAAAAAAAAAAAQAAAAAAAAAAYAAAAHAAAACgAAABMAAAAVAAAAEQAAAA0AAAAFAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAABQAAAAIAAAAAAAAAAQAAAAAAAAAAACAAAAAAAAAAABMAAAAMAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=='); // Dummy/placeholder audio
+        const backsound = new Audio('data:audio/wav;base64,UklGRpwCAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhBQQCAAD//wAAAAAAAAAAAAAACAAADwAAABUAAAAgAAAAOAAAAGUAAAB8AAAAsAAAANsAAADbAAAAugAAAJAAAABCAAAADAAAAAMAAAAAAAABAAAAAQAAAAAAAAABAAAAAQAAAAMAAAAGAAAACQAAABIAAAAkAAAAOAAAAGQAAAB0AAAAxwAAALgAAACJAAAAAgAAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAQAAAAIAAAADAAAACgAAABkAAAA6AAAAYgAAAIEAAACXAAAAPgAAAAMAAAAAAQAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAQAAAAMAAAAEAAAABwAAABMAAAAqAAAASgAAAHwAAACZAAAAvQAAANKAAADKAAAApAAAAGwAAABIAAAALAAAAAQAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAQAAAAMAAAAHAAAACgAAABQAAAAcAAAAQwAAAGcAAACcAAAAsgAAANQAAADXAAAA1QAAAKgAAACUAAAAhAAAACQAAAAUAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAABgAAAAMAAAAKAAAABgAAABwAAAA0AAAAVQAAAGsAAAB4AAAAcgAAAGsAAABVAAAAOAAAAAYAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAABwAAAAIAAAAAAAAAAQAAAAAAAAAAAAABAAAAAAAAAAAAAwAAAAYAAAACgAAABcAAAArAAAAQQAAAGkAAACcAAAAsAAAANQAAADXAAAA0wAAAKwAAACaAAAAhwAAADsAAAAEAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAABgAAAAIAAAAAAAAAAQAAAAAAAAAAAAABAAAAAAAAAAAAAwAAAAYAAAALAAAAEwAAACcAAAA7AAAAVQAAAGQAAAB2AAAAtwAAAP0AAAD7AAAA3AAAALUAAACbAAAAigAAADkAAAAEAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAABQAAAAIAAAAAAAAAAQAAAAAAAAAAAAABAAAAAAAAAAAAAgAAAAMAAAAIAAAACwAAABYAAAAgAAAAOAAAAGoAAAB4AAAAwwAAANwAAADgAAAA1QAAAKwAAACQAAAAAwAAAAAAAAAAAAAAdW4xZWFzZWQgaW50ZW5zZSBzYW1wbGUu'); // Dummy/placeholder audio
+        
+        // Atur agar backsound berulang dan volume rendah
+        backsound.loop = true;
+        backsound.volume = 0.2; 
+        
+        // Inisialisasi papan permainan
+        createBoard();
+
+        // --- FUNGSI UTAMA ---
+
+        /**
+         * Membuat elemen sel papan 3x3
+         */
+        function createBoard() {
+            gameBoard.innerHTML = ''; // Bersihkan papan
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i; // Simpan indeks di data atribut
+                cell.addEventListener('click', handleCellClick);
+                gameBoard.appendChild(cell);
+            }
+            // Putar backsound secara otomatis (jika diizinkan browser)
+            if (!isMuted) {
+                backsound.play().catch(e => console.log("Backsound tidak dapat diputar otomatis:", e));
+            }
+        }
+
+        /**
+         * Penanganan klik sel oleh pemain
+         */
+        function handleCellClick(e) {
+            const clickedCell = e.target;
+            const clickedCellIndex = parseInt(clickedCell.dataset.index);
+
+            // Cek: Game aktif? Sel kosong? Bukan giliran komputer?
+            if (boardState[clickedCellIndex] !== '' || !isGameActive || isComputerTurn) {
+                return;
+            }
+
+            // Langkah Pemain
+            makeMove(clickedCell, clickedCellIndex, currentPlayer);
+            if (!isGameActive) return;
+
+            // Giliran Komputer
+            isComputerTurn = true;
+            statusText.textContent = "Komputer sedang berpikir...";
+            
+            // Tunda sedikit untuk memberi kesan "berpikir"
+            setTimeout(computerMove, 700); 
+        }
+
+        /**
+         * Menandai langkah di UI dan State
+         */
+        function makeMove(cellElement, index, player) {
+            boardState[index] = player;
+            cellElement.textContent = player;
+            cellElement.classList.add(player.toLowerCase());
+            
+            if (!isMuted) clickSound.play();
+
+            const result = checkResult();
+            if (result) {
+                handleGameEnd(result.winner, result.winLine);
+                return;
+            }
+
+            currentPlayer = (player === 'X') ? 'O' : 'X';
+            statusText.textContent = `Giliran **${currentPlayer}**`;
+        }
+
+
+        /**
+         * Logika AI Komputer (Algoritma Sederhana)
+         */
+        function computerMove() {
+            if (!isGameActive) {
+                isComputerTurn = false;
+                return;
+            }
+
+            const bestMoveIndex = getBestMove(boardState, 'O'); // Cari langkah terbaik untuk 'O' (Komputer)
+            
+            if (bestMoveIndex !== -1) {
+                const cellElement = gameBoard.querySelector(`[data-index="${bestMoveIndex}"]`);
+                makeMove(cellElement, bestMoveIndex, 'O');
+            }
+            
+            isComputerTurn = false;
+            if (isGameActive) {
+                statusText.innerHTML = `Giliran **X**`;
+            }
+        }
+
+        /**
+         * Algoritma AI (Blok/Menang sederhana)
+         */
+        function getBestMove(board, player) {
+            const opponent = (player === 'X') ? 'O' : 'X';
+            const emptyCells = board.map((val, idx) => val === '' ? idx : null).filter(val => val !== null);
+            
+            // 1. Cek apakah Komputer bisa MENANG
+            let winningMove = findStrategicMove(board, player);
+            if (winningMove !== -1) return winningMove;
+
+            // 2. Cek apakah Pemain bisa MENANG di langkah berikutnya (BLOCK)
+            let blockingMove = findStrategicMove(board, opponent);
+            if (blockingMove !== -1) return blockingMove;
+
+            // 3. Ambil Tengah (Pilihan terbaik kedua)
+            if (board[4] === '') return 4;
+
+            // 4. Ambil Sudut (Langkah baik)
+            const corners = [0, 2, 6, 8].filter(i => board[i] === '');
+            if (corners.length > 0) return corners[Math.floor(Math.random() * corners.length)];
+
+            // 5. Ambil Sisi
+            const sides = [1, 3, 5, 7].filter(i => board[i] === '');
+            if (sides.length > 0) return sides[Math.floor(Math.random() * sides.length)];
+
+            // 6. Tidak ada langkah (Seharusnya Seri sudah terdeteksi)
+            return emptyCells.length > 0 ? emptyCells[0] : -1;
+        }
+
+        /**
+         * Fungsi pembantu untuk mencari langkah strategis (Menang/Blok)
+         */
+        function findStrategicMove(board, player) {
+            for (const condition of winConditions) {
+                const [a, b, c] = condition;
+                const line = [board[a], board[b], board[c]];
+                const playerMarks = line.filter(mark => mark === player).length;
+                const emptySpot = line.findIndex(mark => mark === '');
+
+                // Jika ada 2 tanda pemain dan 1 tempat kosong
+                if (playerMarks === 2 && emptySpot !== -1) {
+                    // Temukan indeks di papan yang sesuai dengan tempat kosong di baris menang
+                    if (board[a] === '') return a;
+                    if (board[b] === '') return b;
+                    if (board[c] === '') return c;
+                }
+            }
+            return -1; // Tidak ada langkah strategis
+        }
+
+
+        /**
+         * Mengecek apakah ada pemenang atau seri
+         */
+        function checkResult() {
+            let roundWon = false;
+            let winLine = null;
+
+            for (let i = 0; i < winConditions.length; i++) {
+                const condition = winConditions[i];
+                const [a, b, c] = condition;
+
+                if (boardState[a] === '' || boardState[b] === '' || boardState[c] === '') {
+                    continue; // Lewati jika ada sel kosong
+                }
+
+                if (boardState[a] === boardState[b] && boardState[b] === boardState[c]) {
+                    roundWon = true;
+                    winLine = condition;
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                return { winner: boardState[winLine[0]], winLine: winLine };
+            }
+
+            // Cek Seri
+            if (!boardState.includes('')) {
+                return { winner: 'Seri', winLine: null };
+            }
+
+            return null; // Game masih berlanjut
+        }
+
+        /**
+         * Menangani akhir permainan
+         */
+        function handleGameEnd(winner, winLine) {
+            isGameActive = false;
+
+            // Menampilkan pesan akhir
+            let message = '';
+            let endScreenStyle = {};
+
+            if (winner === 'X') {
+                message = "🎉 Kamu Menang!";
+                if (!isMuted) winSound.play();
+            } else if (winner === 'O') {
+                message = "😭 Komputer Menang!";
+            } else { // Seri
+                message = "🤝 Seri!";
+            }
+
+            // Animasi Papan (Highlight Baris Menang)
+            if (winLine) {
+                winLine.forEach(index => {
+                    const cell = gameBoard.querySelector(`[data-index="${index}"]`);
+                    if (cell) cell.classList.add('win');
+                });
+            }
+
+            // Tunda munculnya layar akhir
+            setTimeout(() => {
+                endMessage.textContent = message;
+                endScreen.classList.add('visible');
+            }, 800); // Tunda setelah animasi menang/klik
+
+        }
+
+        /**
+         * Memulai ulang permainan
+         */
+        function restartGame() {
+            boardState = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            isGameActive = true;
+            isComputerTurn = false;
+            statusText.innerHTML = 'Mulai permainan! Kamu adalah **X**.';
+            
+            // Reset UI
+            gameBoard.querySelectorAll('.cell').forEach(cell => {
+                cell.textContent = '';
+                cell.classList.remove('x', 'o', 'win');
+            });
+
+            endScreen.classList.remove('visible'); // Sembunyikan layar akhir
+        }
+
+        /**
+         * Toggle Mute Audio
+         */
+        function toggleMute() {
+            isMuted = !isMuted;
+            muteBtn.textContent = isMuted ? '🔇' : '🔊';
+
+            if (isMuted) {
+                backsound.pause();
+                backsound.currentTime = 0;
+            } else {
+                backsound.play().catch(e => console.log("Gagal memutar backsound:", e));
+            }
+        }
+
+
+        // --- EVENT LISTENERS ---
+        restartBtn.addEventListener('click', restartGame);
+        muteBtn.addEventListener('click', toggleMute);
+
+        // Pastikan game siap saat DOM selesai dimuat
+        document.addEventListener('DOMContentLoaded', () => {
+            // Jika browser memblokir play() otomatis, coba putar saat klik pertama
+            backsound.play().catch(() => {
+                console.log("Audio diblokir. Audio akan diputar setelah interaksi pengguna.");
+            });
+        });
+
+    </script>
+</body>
+</html>
